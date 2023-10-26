@@ -89,9 +89,9 @@ export default function QuestionForm({ mongoUserId }: { mongoUserId: string }) {
   }
 
   function handleTagRemove(tag: string, field: any) {
-    const newTags = field.value.filter((t: string) => t !== tag); // Keeps all tags except the one that was clicked
+    const newTags = field.value.filter((t: string) => t !== tag);
 
-    form.setValue("tags", newTags); // Update the list
+    form.setValue("tags", newTags);
   }
 
   return (
