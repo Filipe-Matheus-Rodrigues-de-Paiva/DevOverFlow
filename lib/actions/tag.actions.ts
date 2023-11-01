@@ -38,7 +38,7 @@ export async function getAllTags(params: GetAllTagsParams) {
   try {
     await connectToDatabase(); // connect to database
 
-    const { filter, page, pageSize, searchQuery } = params;
+    const { filter /* page, pageSize, searchQuery */ } = params;
 
     const tagFilter: FilterQuery<ITag> = filter
       ? { name: filter.toUpperCase() }
@@ -57,7 +57,7 @@ export async function getQuestionsByTagId(params: GetQuestionsByTagIdParams) {
   try {
     await connectToDatabase(); // connect to database
 
-    const { tagId, page = 1, pageSize = 10, searchQuery } = params; // get tagId, page, pageSize and searchQuery from params
+    const { tagId, /* page = 1, pageSize = 10, */ searchQuery } = params; // get tagId, page, pageSize and searchQuery from params
 
     const tagFilter: FilterQuery<ITag> = { _id: tagId }; // set tagFilter to tagId
 

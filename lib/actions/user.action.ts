@@ -137,7 +137,8 @@ export async function getAllSavedQuestions(params: GetSavedQuestionsParams) {
   try {
     await connectToDatabase(); // connect to database
 
-    const { clerkId, filter, page = 1, pageSize = 10, searchQuery } = params; // get clerkId, filter, page, pageSize and searchQuery from params
+    const { clerkId, /* filter, page = 1, pageSize = 10, */ searchQuery } =
+      params; // get clerkId, filter, page, pageSize and searchQuery from params
 
     const query: FilterQuery<typeof Question> = searchQuery
       ? { title: { $regex: new RegExp(searchQuery, "i") } }
@@ -170,7 +171,7 @@ export async function getUserQuestions(params: GetUserStatsParams) {
   try {
     await connectToDatabase(); // connect to database
 
-    const { userId, page = 1, pageSize = 10 } = params;
+    const { userId /* page = 1, pageSize = 10 */ } = params;
 
     const totalQuestions = await Question.countDocuments({ author: userId }); // count total questions
 
@@ -190,7 +191,7 @@ export async function getUserAnswers(params: GetUserStatsParams) {
   try {
     await connectToDatabase(); // connect to database
 
-    const { userId, page = 1, pageSize = 10 } = params;
+    const { userId /* page = 1, pageSize = 10 */ } = params;
 
     const totalAnswers = await Answer.countDocuments({ author: userId }); // count total answers
 
