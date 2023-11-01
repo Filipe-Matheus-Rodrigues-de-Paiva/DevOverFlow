@@ -12,6 +12,10 @@ export default async function Home() {
   const result = await getQuestions({});
   const questions = result.questions;
 
+  await new Promise((resolve) => {
+    setTimeout(resolve, 1000);
+  });
+
   return (
     <>
       <div className="relative flex h-24 flex-col sm:h-fit">
@@ -50,7 +54,7 @@ export default async function Home() {
               title={question.title}
               tags={question.tags}
               author={question.author}
-              upvotes={question.upvotes}
+              upvotes={question.upvotes.length}
               views={question.views}
               answers={question.answers}
               createdAt={question.createdAt}

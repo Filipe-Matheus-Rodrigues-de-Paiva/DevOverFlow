@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 
 export default function LeftSideBar() {
   const pathname = usePathname();
-  const { signOut } = useClerk();
+  const { signOut, user } = useClerk();
 
   return (
     <div className="dark:dark-gradient sticky left-0 top-0 flex h-screen w-72 flex-col items-center justify-between overflow-y-auto pb-3 pt-20 shadow-2xl max-lg:w-24 max-sm:hidden">
@@ -22,7 +22,9 @@ export default function LeftSideBar() {
           return (
             <Link
               key={link.imgURL}
-              href={link.route}
+              href={
+                link.label === "Profile" ? `/profile/${user?.id}` : link.route
+              }
               className={`${
                 isActive
                   ? "primary-gradient rounded-lg text-light-900"

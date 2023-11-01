@@ -19,31 +19,27 @@ import React, { useRef, useState } from "react";
 import { Editor } from "@tinymce/tinymce-react";
 import { Badge } from "../ui/badge";
 import Image from "next/image";
-import { createQuestion, editQuestion } from "@/lib/actions/question.action";
+import { createQuestion } from "@/lib/actions/question.action";
 import { useRouter, usePathname } from "next/navigation";
 
-export default function QuestionForm({
+export default function QuestionCreate({
   mongoUserId,
   type,
-  question,
 }: {
   mongoUserId: string;
   type?: string;
-  question?: string;
 }) {
   const editorRef = useRef(null);
   const [isSubmitting, setisSubmitting] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
-  const parsedQuestionDetails = JSON.parse(question || "");
-
   const form = useForm<z.infer<typeof questionSchema>>({
     resolver: zodResolver(questionSchema),
     defaultValues: {
-      title: parsedQuestionDetails.title || "",
-      explanation: parsedQuestionDetails.content || "",
-      tags: parsedQuestionDetails.tags.map((tag: any) => tag.name) || [],
+      title: "",
+      explanation: "",
+      tags: [],
     },
   });
 
@@ -51,26 +47,15 @@ export default function QuestionForm({
     setisSubmitting(true);
 
     try {
-      if (type === "edit") {
-        await editQuestion({
-          title: values.title,
-          content: values.explanation,
-          path: pathname,
-          questionId: parsedQuestionDetails._id,
-        });
+      await createQuestion({
+        title: values.title,
+        content: values.explanation,
+        tags: values.tags,
+        author: JSON.parse(mongoUserId),
+        path: pathname,
+      });
 
-        router.push(`/question/${parsedQuestionDetails._id}`);
-      } else {
-        await createQuestion({
-          title: values.title,
-          content: values.explanation,
-          tags: values.tags,
-          author: JSON.parse(mongoUserId),
-          path: pathname,
-        });
-
-        router.push("/");
-      }
+      router.push("/");
     } catch (error) {
       console.log(error);
     } finally {
@@ -157,7 +142,6 @@ export default function QuestionForm({
                     // @ts-ignore
                     (editorRef.current = editor)
                   }
-                  initialValue={parsedQuestionDetails.content || ""}
                   onBlur={field.onBlur}
                   onEditorChange={(content) => field.onChange(content)}
                   init={{
@@ -222,23 +206,18 @@ export default function QuestionForm({
                       {field.value.map((tag: any) => (
                         <Badge
                           key={tag}
-                          onClick={
-                            type !== "edit"
-                              ? () => handleTagRemove(tag, field)
-                              : () => {}
-                          }
+                          onClick={() => handleTagRemove(tag, field)}
                           className="subtle-medium background-light800_dark300 text-light400_light500 flex items-center justify-center gap-2 rounded-md border-none px-4 py-2 capitalize"
                         >
                           {tag}
-                          {type !== "edit" && (
-                            <Image
-                              src="/assets/icons/close.svg"
-                              alt="Close icon"
-                              width={12}
-                              height={12}
-                              className="cursor-pointer object-contain invert-0 dark:invert"
-                            />
-                          )}
+
+                          <Image
+                            src="/assets/icons/close.svg"
+                            alt="Close icon"
+                            width={12}
+                            height={12}
+                            className="cursor-pointer object-contain invert-0 dark:invert"
+                          />
                         </Badge>
                       ))}
                     </div>

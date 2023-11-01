@@ -51,5 +51,5 @@ export default function Metric({
       </Link>
     );
 
-  return <div className="flex flex-1 flex-wrap gap-1">{metricContent}</div>;
+  return <div className="flex flex-wrap gap-1">{metricContent}</div>;
 }

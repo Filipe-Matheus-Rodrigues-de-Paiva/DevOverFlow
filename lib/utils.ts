@@ -17,6 +17,6 @@ export function formatAndDivideNumber(number: number): string {
   } else if (number >= 1000) {
     return `${(number / 1000).toFixed(1)} mil`;
   } else {
-    return number.toString();
+    return `${number}`;
   }
 }

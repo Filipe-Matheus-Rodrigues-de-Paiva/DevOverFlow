@@ -15,6 +15,7 @@ import { usePathname } from "next/navigation";
 
 const NavContent = () => {
   const pathname = usePathname();
+  const { user } = useClerk();
 
   return (
     <ul className="my-5 flex flex-col gap-3">
@@ -26,7 +27,9 @@ const NavContent = () => {
         return (
           <SheetClose asChild key={link.route}>
             <Link
-              href={link.route}
+              href={
+                link.label === "Profile" ? `/profile/${user?.id}` : link.route
+              }
               className={`${
                 isActive
                   ? "primary-gradient rounded-lg text-light-900"
