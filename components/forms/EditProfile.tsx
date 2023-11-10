@@ -17,6 +17,7 @@ import { editProfileSchema } from "@/lib/validations";
 import React, { useState } from "react";
 import { updateUser } from "@/lib/actions/user.action";
 import { usePathname, useRouter } from "next/navigation";
+import { useToast } from "../ui/use-toast";
 
 interface Props {
   mongoUser?: string;
@@ -26,6 +27,7 @@ export default function EditProfileForm({ mongoUser }: Props) {
   const [isSubmitting, setisSubmitting] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { toast } = useToast();
 
   const parsedMongoUser = JSON.parse(mongoUser || "");
 
@@ -51,6 +53,12 @@ export default function EditProfileForm({ mongoUser }: Props) {
       });
 
       router.back();
+
+      toast({
+        title: "Profile Updated",
+        description: "Profile information has been successfully updated.",
+        style: { backgroundColor: "#020617", color: "white" },
+      });
     } catch (error) {
       console.log(error);
     } finally {

@@ -5,6 +5,7 @@ import { connectToDatabase } from "../mongoose";
 import {
   CreateUserParams,
   DeleteUserParams,
+  GetAllUsersParams,
   GetSavedQuestionsParams,
   GetUserByIdParams,
   GetUserStatsParams,
@@ -83,13 +84,45 @@ export async function deleteUser(params: DeleteUserParams) {
   }
 }
 
-export async function getAllUsers() {
+export async function getAllUsers(params: GetAllUsersParams) {
   try {
     await connectToDatabase();
 
-    const users = await User.find({}).sort({ createdAt: -1 });
+    const { searchQuery, filter, page = 1, pageSize = 10 } = params;
 
-    return users;
+    const query: FilterQuery<typeof User> = {};
+
+    if (searchQuery) {
+      query.$or = [
+        { name: { $regex: new RegExp(searchQuery, "i") } },
+        { username: { $regex: new RegExp(searchQuery, "i") } },
+      ];
+    }
+
+    let sortOptions = {};
+
+    switch (filter) {
+      case "new_users":
+        sortOptions = { joinedAt: -1 };
+        break;
+      case "old_users":
+        sortOptions = { joinedAt: 1 };
+        break;
+      case "top_contributors":
+        query.answers = { reputation: -1 };
+        break;
+      default:
+        break;
+    }
+
+    const totalUsers = await User.countDocuments(query);
+
+    const users = await User.find(query)
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+      .sort(sortOptions);
+
+    return { users, totalPages: Math.ceil(totalUsers / pageSize) };
   } catch (error) {
     console.log(error);
     throw error;
@@ -135,32 +168,59 @@ export async function toggleSaveQuestion(params: ToggleSaveQuestionParams) {
 
 export async function getAllSavedQuestions(params: GetSavedQuestionsParams) {
   try {
-    await connectToDatabase(); // connect to database
+    await connectToDatabase();
 
-    const { clerkId, /* filter, page = 1, pageSize = 10, */ searchQuery } =
-      params; // get clerkId, filter, page, pageSize and searchQuery from params
+    const { clerkId, filter, page = 1, pageSize = 10, searchQuery } = params;
 
     const query: FilterQuery<typeof Question> = searchQuery
       ? { title: { $regex: new RegExp(searchQuery, "i") } }
-      : {}; // if searchQuery is present, set query to searchQuery, else set it to empty object
+      : {};
+
+    let sortOptions = {};
+
+    switch (filter) {
+      case "most_recent":
+        sortOptions = { createdAt: -1 };
+        break;
+      case "oldest":
+        sortOptions = { createdAt: 1 };
+        break;
+      case "most_voted":
+        sortOptions = { upvotes: -1 };
+        break;
+      case "most_viewed":
+        sortOptions = { views: -1 };
+        break;
+      case "most_answered":
+        sortOptions = { answers: -1 };
+        break;
+      default:
+        break;
+    }
 
     const user = await User.findOne({ clerkId }).populate({
-      path: "saved", // find user by clerkId and populate 'saved' array
-      match: query, // match query
+      path: "saved",
+      match: query,
       options: {
-        sort: { createdAt: -1 }, // sort by createdAt
+        sort: sortOptions,
+        skip: (page - 1) * pageSize,
+        limit: pageSize + 1,
       },
       populate: [
-        { path: "tags", model: Tag, select: "_id name" }, // populate tags
-        { path: "author", model: User, select: "_id clerkId name picture" }, // populate author
+        { path: "tags", model: Tag, select: "_id name" },
+        { path: "author", model: User, select: "_id clerkId name picture" },
       ],
     });
 
-    if (!user) throw new Error("User not found"); // if user not found, throw error
+    if (!user) throw new Error("User not found");
 
-    const savedQuestions = user.saved; // get saved questions
+    const savedQuestions = user.saved;
+    const totalSavedQuestions = savedQuestions.length;
 
-    return { questions: savedQuestions }; // return saved questions
+    return {
+      questions: savedQuestions,
+      totalPages: Math.ceil(totalSavedQuestions / pageSize),
+    };
   } catch (error) {
     console.log(error);
     throw error;
@@ -169,18 +229,22 @@ export async function getAllSavedQuestions(params: GetSavedQuestionsParams) {
 
 export async function getUserQuestions(params: GetUserStatsParams) {
   try {
-    await connectToDatabase(); // connect to database
+    await connectToDatabase();
 
-    const { userId /* page = 1, pageSize = 10 */ } = params;
+    const { userId, page = 1, pageSize = 10 } = params;
 
-    const totalQuestions = await Question.countDocuments({ author: userId }); // count total questions
+    const totalQuestions = await Question.countDocuments({ author: userId });
 
     const questions = await Question.find({ author: userId })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
       .sort({ views: -1, upvotes: -1 })
       .populate("tags", "_id name")
       .populate("author", "_id clerkId name picture");
 
-    return { questions, totalQuestions }; // return questions and total questions
+    const totalPages = Math.ceil(totalQuestions / pageSize);
+
+    return { questions, totalQuestions, totalPages };
   } catch (error) {
     console.log(error);
     throw error;
@@ -189,18 +253,24 @@ export async function getUserQuestions(params: GetUserStatsParams) {
 
 export async function getUserAnswers(params: GetUserStatsParams) {
   try {
-    await connectToDatabase(); // connect to database
+    await connectToDatabase();
 
-    const { userId /* page = 1, pageSize = 10 */ } = params;
+    const { userId, page = 1, pageSize = 10 } = params;
 
-    const totalAnswers = await Answer.countDocuments({ author: userId }); // count total answers
+    const totalAnswers = await Answer.countDocuments({ author: userId });
 
     const answers = await Answer.find({ author: userId })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
       .sort({ upvotes: -1 })
       .populate("question", "_id title")
       .populate("author", "_id clerkId name picture");
 
-    return { answers, totalAnswers }; // return answers and total answers
+    return {
+      answers,
+      totalAnswers,
+      totalPages: Math.ceil(totalAnswers / pageSize),
+    };
   } catch (error) {
     console.log(error);
     throw error;

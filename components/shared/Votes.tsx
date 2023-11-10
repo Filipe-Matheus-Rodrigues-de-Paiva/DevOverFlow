@@ -10,7 +10,8 @@ import { toggleSaveQuestion } from "@/lib/actions/user.action";
 import { formatAndDivideNumber } from "@/lib/utils";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useToast } from "../ui/use-toast";
 
 interface Props {
   type: "Question" | "Answer";
@@ -34,19 +35,39 @@ export default function Votes({
   hasSaved,
 }: Props) {
   const pathname = usePathname();
+  const { toast } = useToast();
+  const [mounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    viewQuestion({
-      questionId: JSON.parse(itemId),
-      userId: JSON.parse(userId),
-    });
-  });
+    setIsMounted(true);
+
+    if (mounted) {
+      viewQuestion({
+        questionId: JSON.parse(itemId),
+        userId: JSON.parse(userId),
+      });
+    }
+  }, [mounted, itemId, userId]);
 
   const handleSave = async () => {
     await toggleSaveQuestion({
       questionId: JSON.parse(itemId),
       userId: JSON.parse(userId),
       path: pathname,
+    });
+
+    if (!hasSaved) {
+      toast({
+        title: "Question saved in your collection",
+        style: { backgroundColor: "#020617", color: "white", border: "none" },
+      });
+
+      return;
+    }
+
+    toast({
+      title: "Question deleted from your collection",
+      style: { backgroundColor: "#7f1d1d", color: "white", border: "none" },
     });
   };
 

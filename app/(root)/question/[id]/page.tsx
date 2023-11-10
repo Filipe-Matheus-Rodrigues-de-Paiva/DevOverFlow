@@ -6,7 +6,7 @@ import VotesMobile from "@/components/shared/VotesMobile";
 import Votes from "@/components/shared/Votes";
 import Filter from "@/components/shared/filter/Filter";
 import RenderTag from "@/components/shared/rendertag/RenderTag";
-import { QuestionFilters } from "@/constants/filters";
+import { AnswerFilters } from "@/constants/filters";
 import { getAllAnswers } from "@/lib/actions/answer.actions";
 import { getQuestionById } from "@/lib/actions/question.action";
 import { getUserById } from "@/lib/actions/user.action";
@@ -14,6 +14,7 @@ import { calculateTimeElapsed, formatAndDivideNumber } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import Image from "next/image";
 import Link from "next/link";
+import { URLProps } from "@/types";
 
 interface IAuthor {
   _id: string;
@@ -64,13 +65,18 @@ export interface IQuestion {
 
 export default async function QuestionDetails({
   params,
-}: {
-  params: { id: string };
-}) {
+  searchParams,
+}: URLProps) {
   const question: IQuestion = await getQuestionById({ questionId: params.id });
-  const result = await getAllAnswers({ questionId: params.id });
+  const result = await getAllAnswers({
+    questionId: params.id,
+    sortBy: searchParams.filter,
+    page: Number(searchParams.page) || 1,
+    pageSize: 10,
+  });
   // @ts-ignore
   const answers: IAnswer[] = result.answers;
+  const totalPages = result.totalPages;
   const { userId: clerkId } = auth();
 
   let mongoUser;
@@ -189,34 +195,22 @@ export default async function QuestionDetails({
 
       {/* Answers */}
       <div className="flex-between mt-5 items-center">
-        <h3 className="primary-text-gradient">
-          {question.answers.length} Answers
-        </h3>
-        <Filter filters={QuestionFilters} containerClasses="max-md:flex" />
+        <h3 className="primary-text-gradient">{answers.length} Answers</h3>
+        <Filter filters={AnswerFilters} containerClasses="max-md:flex" />
       </div>
-      <AllAnswers answers={answers} question={question} mongoUser={mongoUser} />
+      <AllAnswers
+        answers={answers}
+        question={question}
+        mongoUser={mongoUser}
+        totalPages={totalPages}
+      />
 
       {/* Answer Form */}
-      <div className="mt-10 flex flex-col gap-5">
-        <div className="flex-between flex-col gap-5 sm:flex-row sm:items-center sm:gap-2">
-          <p className="paragraph-semibold text-dark200_light900 dark:text-light-900">
-            Write your answer here
-          </p>
-          <div className="btn background-light800_dark400 flex gap-2 rounded p-2 text-primary-500">
-            <Image
-              src={"/assets/icons/stars.svg"}
-              alt="stars"
-              width={15}
-              height={15}
-            />
-            <button>Generate AI answer</button>
-          </div>
-        </div>
-        <AnswerForm
-          authorId={JSON.stringify(mongoUser._id)}
-          questionId={JSON.stringify(question._id)}
-        />
-      </div>
+      <AnswerForm
+        question={question.content}
+        authorId={JSON.stringify(mongoUser._id)}
+        questionId={JSON.stringify(question._id)}
+      />
     </>
   );
 }

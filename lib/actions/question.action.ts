@@ -11,23 +11,54 @@ import {
   GetQuestionByIdParams,
   GetQuestionsParams,
   QuestionVoteParams,
-  /* ViewQuestionParams */
 } from "./shared.types";
 import User from "@/database/user.model";
 import Answer from "@/database/answer.model";
 import Interaction from "@/database/interaction.model";
+import { FilterQuery } from "mongoose";
 
 export async function getQuestions(params: GetQuestionsParams) {
   try {
     connectToDatabase();
 
-    /* const { filter, page = 1, pageSize = 10, searchQuery } = params; */
+    const { searchQuery, filter, page = 1, pageSize = 10 } = params;
 
-    const questions = await Question.find({})
+    const query: FilterQuery<typeof Question> = {};
+
+    if (searchQuery) {
+      query.$or = [
+        { title: { $regex: new RegExp(searchQuery, "i") } },
+        { content: { $regex: new RegExp(searchQuery, "i") } },
+      ];
+    }
+
+    // lógica de filtragem
+    let sortOptions = {};
+
+    switch (filter) {
+      case "newest":
+        sortOptions = { createdAt: -1 };
+        break;
+      case "frequent":
+        sortOptions = { views: -1 };
+        break;
+      case "unanswered":
+        query.answers = { $size: 0 };
+        break;
+      default:
+        break;
+    }
+
+    const totalQuestions = await Question.countDocuments(query);
+
+    const questions = await Question.find(query)
+      .sort(sortOptions)
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
       .populate({ path: "tags", model: Tag })
       .populate({ path: "author", model: User });
 
-    return { questions };
+    return { questions, totalPages: Math.ceil(totalQuestions / pageSize) };
   } catch (error) {
     console.log(error);
     throw error;
@@ -36,16 +67,16 @@ export async function getQuestions(params: GetQuestionsParams) {
 
 export async function createQuestion(params: CreateQuestionParams) {
   try {
-    await connectToDatabase(); // connect to database
-    const { title, content, tags, author, path } = params; // get title, content, tags, author and path from params
+    await connectToDatabase();
+    const { title, content, tags, author, path } = params;
 
     const newQuestion = await Question.create({
       title,
       content,
       author,
-    }); // create new question
+    });
 
-    const tagDocuments = []; // array of tag documents
+    const tagDocuments = [];
 
     for (const tag of tags) {
       const existingTag = await Tag.findOneAndUpdate(
@@ -55,15 +86,25 @@ export async function createQuestion(params: CreateQuestionParams) {
       );
 
       tagDocuments.push(existingTag);
-    } // for each tag, find or create tag and push to tagDocuments
+    }
 
     await Question.findByIdAndUpdate(newQuestion._id, {
       $push: { tags: { $each: tagDocuments } },
-    }); // push tagDocuments to question
+    });
 
-    revalidatePath(path); // revalidate path
+    await Interaction.create({
+      user: author,
+      action: "ask_question",
+      question: newQuestion._id,
+      tags: tagDocuments,
+    });
+
+    await User.findByIdAndUpdate(author, { $inc: { reputation: 5 } });
+
+    revalidatePath(path);
   } catch (error) {
     console.error(error);
+    throw error;
   }
 }
 
@@ -93,28 +134,34 @@ export async function upvoteQuestion(params: QuestionVoteParams) {
 
     const { hasdownVoted, hasupVoted, path, questionId, userId } = params;
 
-    let updateQuery = {}; // update query for the question
+    let updateQuery = {};
 
     if (hasupVoted) {
-      updateQuery = { $pull: { upvotes: userId } }; // remove the upvote
+      updateQuery = { $pull: { upvotes: userId } };
     } else if (hasdownVoted) {
       updateQuery = {
         $pull: { downvotes: userId },
         $push: { upvotes: userId },
-      }; // remove the downvote and add the upvote
+      };
     } else {
-      updateQuery = { $addToSet: { upvotes: userId } }; // add the upvote
+      updateQuery = { $addToSet: { upvotes: userId } };
     }
 
     const question = await Question.findByIdAndUpdate(questionId, updateQuery, {
       new: true,
-    }); // new: true returns the updated document
+    });
 
     if (!question) {
       throw new Error("Question not found");
     }
 
-    // increment user's reputation: TODO
+    await User.findByIdAndUpdate(userId, {
+      $inc: { reputation: hasupVoted ? -1 : 1 },
+    });
+
+    await User.findByIdAndUpdate(question.author, {
+      $inc: { reputation: hasupVoted ? -10 : 10 },
+    });
 
     revalidatePath(path);
   } catch (error) {
@@ -129,28 +176,34 @@ export async function downvoteQuestion(params: QuestionVoteParams) {
 
     const { hasdownVoted, hasupVoted, path, questionId, userId } = params;
 
-    let updateQuery = {}; // update query for the question
+    let updateQuery = {};
 
     if (hasdownVoted) {
-      updateQuery = { $pull: { downvotes: userId } }; // remove the downvote
+      updateQuery = { $pull: { downvotes: userId } };
     } else if (hasupVoted) {
       updateQuery = {
         $pull: { upvotes: userId },
         $push: { downvotes: userId },
-      }; // remove the upvote and add the downvote
+      };
     } else {
-      updateQuery = { $addToSet: { downvotes: userId } }; // add the downvote
+      updateQuery = { $addToSet: { downvotes: userId } };
     }
 
     const question = await Question.findByIdAndUpdate(questionId, updateQuery, {
       new: true,
-    }); // new: true returns the updated document
+    });
 
     if (!question) {
       throw new Error("Question not found");
     }
 
-    // decrement user's reputation: TODO
+    await User.findByIdAndUpdate(userId, {
+      $inc: { reputation: hasdownVoted ? -2 : 2 },
+    });
+
+    await User.findByIdAndUpdate(question.author, {
+      $inc: { reputation: hasdownVoted ? -10 : 10 },
+    });
 
     revalidatePath(path);
   } catch (error) {
@@ -165,13 +218,17 @@ export async function deleteQuestion(params: DeleteQuestionParams) {
 
     const { path, questionId } = params;
 
-    await Question.findByIdAndDelete(questionId); // delete question
-    await Answer.deleteMany({ question: questionId }); // delete answers related to question
-    await Interaction.deleteMany({ question: questionId }); // delete interactions related to question
+    const question = await Question.findByIdAndDelete(questionId);
+    await Answer.deleteMany({ question: questionId });
+    await Interaction.deleteMany({ question: questionId });
     await Tag.updateMany(
       { questions: questionId },
       { $pull: { questions: questionId } }
-    ); // remove question from tags
+    );
+
+    await User.findByIdAndUpdate(question.author, {
+      $inc: { reputation: -5 },
+    });
 
     revalidatePath(path);
   } catch (error) {

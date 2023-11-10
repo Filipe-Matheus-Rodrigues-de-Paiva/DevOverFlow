@@ -1,3 +1,4 @@
+import { Toaster } from "@/components/ui/toaster";
 import { ClerkProvider } from "@clerk/nextjs";
 import React from "react";
 import "./globals.css";
@@ -45,6 +46,7 @@ export default function RootLayout({
           }}
         >
           <ThemeProvider>{children}</ThemeProvider>
+          <Toaster />
         </ClerkProvider>
       </body>
     </html>

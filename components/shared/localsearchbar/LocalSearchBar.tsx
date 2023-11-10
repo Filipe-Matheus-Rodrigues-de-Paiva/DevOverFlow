@@ -1,8 +1,10 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { formUrlQuery, removeKeysFromQuery } from "@/lib/utils";
 import Image from "next/image";
-import React, { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import React, { useEffect, useState } from "react";
 
 interface CustomInputProps {
   route: string;
@@ -19,11 +21,38 @@ export default function LocalSearchBar({
   placeholder,
   otherClasses,
 }: CustomInputProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
+  const query = searchParams.get("q");
+
+  const [search, setSearch] = useState(query || "");
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (search) {
+        const newUrl = formUrlQuery({
+          params: searchParams.toString(),
+          key: "q",
+          value: search,
+        });
+
+        router.push(newUrl, { scroll: false });
+      } else {
+        if (route.includes(pathname)) {
+          const newUrl = removeKeysFromQuery({
+            params: searchParams.toString(),
+            keysToRemove: ["q"],
+          });
+
+          router.push(newUrl, { scroll: false });
+        }
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [router, pathname, query, searchParams, search, route]);
 
   return (
     <>
@@ -42,12 +71,10 @@ export default function LocalSearchBar({
         <Input
           type="text"
           placeholder={placeholder}
-          onChange={handleChange}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
           className="paragraph-regular no-focus placeholder border-none bg-transparent shadow-none outline-none dark:text-white"
         />
-      </div>
-      <div>
-        <h1 className="text-white">{searchTerm}</h1>
       </div>
     </>
   );

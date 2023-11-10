@@ -5,15 +5,24 @@ import QuestionCard from "@/components/cards/QuestionCard";
 import NoResult from "@/components/shared/NoResult";
 import { getAllSavedQuestions } from "@/lib/actions/user.action";
 import { auth } from "@clerk/nextjs/server";
+import { SearchParamsProps } from "@/types";
+import Pagination from "@/components/shared/Pagination";
 
-export default async function Collection() {
+export default async function Collection({ searchParams }: SearchParamsProps) {
   const { userId } = auth();
 
   if (!userId) return null;
 
-  const result = await getAllSavedQuestions({ clerkId: userId });
+  const result = await getAllSavedQuestions({
+    clerkId: userId,
+    searchQuery: searchParams.q,
+    filter: searchParams.filter,
+    page: Number(searchParams.page) || 1,
+    pageSize: 10,
+  });
 
   const questions = result.questions;
+  const totalPages = result.totalPages;
 
   await new Promise((resolve) => {
     setTimeout(resolve, 1000);
@@ -21,7 +30,7 @@ export default async function Collection() {
 
   return (
     <>
-      <h1 className="h1-bold text-dark200_light900 absolute bottom-0 dark:text-light-900 sm:static">
+      <h1 className="h1-bold text-dark200_light900 dark:text-light-900 sm:static">
         Saved Questions
       </h1>
 
@@ -63,6 +72,8 @@ export default async function Collection() {
           />
         )}
       </div>
+
+      <Pagination totalPages={totalPages} />
     </>
   );
 }

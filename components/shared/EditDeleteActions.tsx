@@ -4,6 +4,7 @@ import { deleteQuestion } from "@/lib/actions/question.action";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { deleteAnswer } from "@/lib/actions/answer.actions";
+import { useToast } from "../ui/use-toast";
 
 export default function EditDeleteActions({
   type,
@@ -14,6 +15,7 @@ export default function EditDeleteActions({
 }) {
   const path = usePathname();
   const router = useRouter();
+  const { toast } = useToast();
 
   const handleEdit = () => {
     router.push(`/question/edit/${JSON.parse(itemId)}`);
@@ -22,8 +24,20 @@ export default function EditDeleteActions({
   const handleDelete = async (itemId: string) => {
     if (type === "question") {
       await deleteQuestion({ questionId: JSON.parse(itemId), path });
+
+      toast({
+        title: "Question Deleted",
+        description: "Your question has been successfully deleted.",
+        style: { backgroundColor: "#7f1d1d", color: "white" },
+      });
     } else {
       await deleteAnswer({ answerId: JSON.parse(itemId), path });
+
+      toast({
+        title: "Answer Deleted",
+        description: "Your answer has been successfully deleted.",
+        style: { backgroundColor: "#7f1d1d", color: "white" },
+      });
     }
   };
 

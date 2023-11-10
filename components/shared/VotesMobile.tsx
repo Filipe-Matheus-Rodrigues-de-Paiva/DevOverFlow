@@ -9,6 +9,9 @@ import { toggleSaveQuestion } from "@/lib/actions/user.action";
 import { formatAndDivideNumber } from "@/lib/utils";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useToast } from "../ui/use-toast";
+import { useEffect, useState } from "react";
+import { viewQuestion } from "@/lib/actions/interaction.action";
 
 interface Props {
   type: "Question" | "Answer";
@@ -32,12 +35,30 @@ export default function VotesMobile({
   hasSaved,
 }: Props) {
   const pathname = usePathname();
+  const { toast } = useToast();
+  const [mounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+
+    if (mounted) {
+      viewQuestion({
+        questionId: JSON.parse(itemId),
+        userId: JSON.parse(userId),
+      });
+    }
+  }, [mounted, itemId, userId]);
 
   const handleSave = async () => {
     await toggleSaveQuestion({
       questionId: JSON.parse(itemId),
       userId: JSON.parse(userId),
       path: pathname,
+    });
+
+    toast({
+      title: "Question saved in your collection",
+      style: { backgroundColor: "white", border: "none" },
     });
   };
 

@@ -21,6 +21,7 @@ import { Badge } from "../ui/badge";
 import Image from "next/image";
 import { createQuestion, editQuestion } from "@/lib/actions/question.action";
 import { useRouter, usePathname } from "next/navigation";
+import { useToast } from "../ui/use-toast";
 
 export default function QuestionForm({
   mongoUserId,
@@ -35,6 +36,7 @@ export default function QuestionForm({
   const [isSubmitting, setisSubmitting] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
 
   const parsedQuestionDetails = JSON.parse(question || "");
 
@@ -59,6 +61,12 @@ export default function QuestionForm({
           questionId: parsedQuestionDetails._id,
         });
 
+        toast({
+          title: "Question Updated",
+          description: "Your question has been successfully updated",
+          style: { backgroundColor: "#020617" },
+        });
+
         router.push(`/question/${parsedQuestionDetails._id}`);
       } else {
         await createQuestion({
@@ -67,6 +75,12 @@ export default function QuestionForm({
           tags: values.tags,
           author: JSON.parse(mongoUserId),
           path: pathname,
+        });
+
+        toast({
+          title: "Question created",
+          description: "Your question has been successfully created.",
+          style: { backgroundColor: "#020617", color: "white" },
         });
 
         router.push("/");

@@ -7,10 +7,24 @@ import HomeFilters from "@/components/home/HomeFilters";
 import QuestionCard from "@/components/cards/QuestionCard";
 import NoResult from "@/components/shared/NoResult";
 import { getQuestions } from "@/lib/actions/question.action";
+import { SearchParamsProps } from "@/types";
+import Pagination from "@/components/shared/Pagination";
+import type { Metadata } from "next";
 
-export default async function Home() {
-  const result = await getQuestions({});
+export const metadata: Metadata = {
+  title: "Home | DevFlow",
+};
+
+export default async function Home({ searchParams }: SearchParamsProps) {
+  const result = await getQuestions({
+    searchQuery: searchParams.q,
+    filter: searchParams.filter,
+    page: Number(searchParams.page) || 1,
+    pageSize: 10,
+  });
   const questions = result.questions;
+
+  const totalPages = result.totalPages;
 
   await new Promise((resolve) => {
     setTimeout(resolve, 1000);
@@ -69,6 +83,8 @@ export default async function Home() {
           />
         )}
       </div>
+
+      <Pagination totalPages={totalPages} />
     </>
   );
 }

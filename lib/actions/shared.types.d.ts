@@ -124,7 +124,7 @@ export interface GetAllUsersParams {
   page?: number;
   pageSize?: number;
   filter?: string;
-  searchQuery?: string; // Add searchQuery parameter
+  searchQuery?: string;
 }
 
 export interface UpdateUserParams {

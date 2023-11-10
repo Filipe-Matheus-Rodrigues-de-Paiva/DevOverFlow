@@ -1,4 +1,3 @@
-import { getAllTags } from "@/lib/actions/tag.actions";
 import Link from "next/link";
 import NoResult from "../shared/NoResult";
 
@@ -15,13 +14,11 @@ interface Tag {
   tags: ITag[];
 }
 
-export default async function TagCard() {
-  const results: Tag = await getAllTags({});
-
+export default async function TagCard({ tags }: Tag) {
   return (
     <>
-      {results.tags.length > 0 &&
-        results.tags.map((tag) => (
+      {tags.length > 0 &&
+        tags.map((tag) => (
           <Link
             href={`/tags/${tag._id}`}
             className="w-full rounded border border-slate-500 md:max-w-[270px]"
@@ -44,7 +41,7 @@ export default async function TagCard() {
             </div>
           </Link>
         ))}
-      {results.tags.length === 0 && (
+      {tags.length === 0 && (
         <NoResult
           title="No Tags Found"
           description="It looks like there are no tags found."

@@ -32,8 +32,10 @@ export default function ParseHTML({ data }: { data: string }) {
   }, []);
 
   return (
-    <div className="text-dark200_light900 mt-10 max-w-[800px] text-justify dark:text-light-900">
-      {parse(data)}
+    <div className="text-dark200_light900 mt-10 max-w-[800px] dark:text-light-900">
+      <h4 className="paragraph-regular text-justify">
+        {parse(data.slice(3, data.length - 4))}
+      </h4>
     </div>
   );
 }

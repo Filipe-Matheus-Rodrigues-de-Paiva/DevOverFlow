@@ -1,8 +1,8 @@
-import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import NoResult from "../shared/NoResult";
 import AnswerCard from "../cards/AnswerCard";
 import QuestionCard from "../cards/QuestionCard";
+import Pagination from "../shared/Pagination";
 
 interface IAuthor {
   _id: string;
@@ -42,9 +42,16 @@ interface IAnswer {
 interface Props {
   questions: IQuestion[];
   answers: IAnswer[];
+  totalPagesQuestions: any;
+  totalPagesAnswers: any;
 }
 
-export default function Tab({ questions, answers }: Props) {
+export default function Tab({
+  questions,
+  answers,
+  totalPagesQuestions,
+  totalPagesAnswers,
+}: Props) {
   return (
     <Tabs defaultValue="top-posts" className="max-w-[400px]">
       <TabsList className="background-light800_dark400 min-h-[42px] p-1">
@@ -78,6 +85,8 @@ export default function Tab({ questions, answers }: Props) {
             linkTitle="Ask a Question"
           />
         )}
+
+        <Pagination totalPages={totalPagesQuestions} />
       </TabsContent>
       <TabsContent value="answers" className="flex flex-col gap-5">
         {answers.length > 0 ? (
@@ -99,6 +108,8 @@ export default function Tab({ questions, answers }: Props) {
             linkTitle="Ask a Question"
           />
         )}
+
+        <Pagination totalPages={totalPagesAnswers} />
       </TabsContent>
     </Tabs>
   );
